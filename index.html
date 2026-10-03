@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registration</title>
+<style>
+:root{--bg:#f4f5fb;--card:#fff;--text:#1e1b4b;--muted:#6b7280;--line:#e0e3f0;--brand:#4f46e5;--ok:#047857;--err:#b91c1c}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1020;--card:#191a30;--text:#eef;--muted:#9aa0c0;--line:#2c2e4d}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+.card{width:100%;max-width:640px;background:var(--card);border-radius:18px;padding:28px;box-shadow:0 10px 40px rgba(79,70,229,.12)}
+h1{margin:0 0 4px;font-size:1.6rem}.sub{margin:0 0 22px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.full{grid-column:1/-1}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:.85rem;font-weight:600;margin-bottom:6px}
+input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--text);font:inherit}
+input:focus,select:focus{outline:2px solid var(--brand);border-color:transparent}
+small{color:var(--muted)}
+button{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:var(--brand);color:#fff;font:700 1rem inherit;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+#msg{margin-top:16px;padding:12px;border-radius:10px;display:none}
+#msg.ok{display:block;background:#d1fae5;color:var(--ok)}#msg.err{display:block;background:#fee2e2;color:var(--err)}
+</style>
+</head>
+<body>
+<form class="card" id="f" novalidate>
+  <h1>Register</h1>
+  <p class="sub">Fill in your details. Re-submit with the same ID and email to update them.</p>
+  <div class="grid">
+    <div class="full"><label for="name">Full Name *</label><input id="name" required autocomplete="name"></div>
+    <div><label for="id">Employee / Registration ID</label><input id="id" placeholder="Leave blank to auto-generate" maxlength="20"></div>
+    <div><label for="status">Status</label><select id="status"><option>Active</option><option>Inactive</option></select></div>
+    <div><label for="email">Email *</label><input id="email" type="email" required autocomplete="email"></div>
+    <div><label for="phone">Phone Number *</label><input id="phone" type="tel" required autocomplete="tel"></div>
+    <div><label for="department">Department *</label><select id="department" required><option value="">Loading…</option></select></div>
+    <div><label for="computer">Assigned Computer</label><select id="computer"><option value="">Loading…</option></select></div>
+  </div>
+  <small>Registration date and time are added automatically.</small>
+  <button id="btn" type="submit">REGISTER</button>
+  <div id="msg" role="status"></div>
+</form>
+<script>
+// 1) Paste your Apps Script Web app URL here:
+const SCRIPT_URL = "PASTE_YOUR_WEB_APP_URL_HERE";
+
+const $ = id => document.getElementById(id), msg = $("msg");
+const show = (t, c) => { msg.className = c; msg.textContent = t; };
+
+fetch(SCRIPT_URL).then(r => r.json()).then(d => {
+  $("department").innerHTML = '<option value="">Select…</option>' + d.departments.map(x => `<option>${x}</option>`).join("");
+  $("computer").innerHTML = '<option value="">None</option>' + d.computers.map(c => `<option value="${c.name}">${c.name}${c.inUse ? " (in use)" : ""}</option>`).join("");
+}).catch(() => show("Could not load the form options. Check SCRIPT_URL.", "err"));
+
+$("f").addEventListener("submit", async e => {
+  e.preventDefault();
+  const body = { id: $("id").value, name: $("name").value, email: $("email").value, phone: $("phone").value,
+                 department: $("department").value, computer: $("computer").value, status: $("status").value };
+  if (!body.name || !body.email || !body.phone || !body.department) return show("Please fill all required (*) fields.", "err");
+  $("btn").disabled = true; msg.className = "";
+  try {
+    const r = await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.ok) { show(`${d.created ? "Registered" : "Updated"} successfully. Your ID: ${d.id}`, "ok"); $("id").value = d.id; }
+    else show(d.error, "err");
+  } catch (x) { show("Network error. Please try again.", "err"); }
+  $("btn").disabled = false;
+});
+</script>
+</body>
+</html>
